@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>罗译迪 | Director Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#000;color:#fff;overflow-x:hidden}
+
+/* 视频背景 */
+video.bg-video{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  object-fit:cover;
+  z-index:-3;
+  filter:brightness(0.5) contrast(1.1);
+}
+
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-2}
+
+.bg-layer{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background-size:cover;
+  background-position:center;
+
+  z-index:-3;              /* 🔥 关键：必须比canvas还低 */
+  pointer-events:none;     /* 🔥 防止挡点击 */
+
+  opacity:0;
+  transition: opacity 1s ease, transform 6s ease;
+  transform: scale(1.1);
+}
+
+.filter{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10}
+.filter{
+  position:fixed;
+  top:30px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:10;
+  display:flex;
+  gap:12px;
+  padding:8px 14px;
+  border-radius:999px;
+
+  background:rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  border:1px solid rgba(255,255,255,0.1);
+}
+
+/* 按钮基础 */
+.filter button{
+  padding:8px 18px;
+  border-radius:999px;
+  border:none;
+  background:transparent;
+  color:rgba(255,255,255,0.7);
+  font-size:13px;
+  letter-spacing:1px;
+  cursor:pointer;
+
+  transition: all 0.3s ease;
+}
+
+/* hover 状态 */
+.filter button:hover{
+  color:#fff;
+  background:rgba(255,255,255,0.1);
+}
+
+/* 点击/选中状态 */
+.filter button.active{
+  color:#000;
+  background:#fff;
+  box-shadow:0 0 20px rgba(255,255,255,0.4);
+}
+
+.section{height:100vh;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:900;opacity:0;transform:translateY(80px);transition:1s;text-align:center}
+.section.active{opacity:1;transform:translateY(0)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:30px;padding:100px}
+.item{cursor:pointer;overflow:hidden}
+.item img{width:100%;height:200px;object-fit:cover;transition:0.5s}
+.item:hover img{transform:scale(1.1)}
+.hidden{display:none}
+
+#videoModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:none;align-items:center;justify-content:center;z-index:999;opacity:0;transition:0.5s}
+#videoModal.active{display:flex;opacity:1}
+video.player{width:80%;max-width:1000px}
+
+/* 页面切换 */
+.page{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column; /* 保证图片和内容垂直排列 */
+  justify-content:flex-start;
+  align-items:center;
+  padding-top:100px; /* 避免固定顶部 */
+  opacity:0;
+  transform:translateY(40px) scale(0.98);
+  pointer-events:none;
+  transition: all 0.6s cubic-bezier(.77,0,.18,1);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:30px;
+  width:90%;
+  max-width:1200px;
+  margin-top:50px; /* 确保图片显示在下部 */
+}
+
+.page.active{
+  opacity:1;
+  transform:translateY(0) scale(1);
+  pointer-events:auto;
+}
+
+.filter{
+  position:fixed;
+  top:30px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:10;
+  display:flex;
+  gap:6px;
+  padding:6px;
+  border-radius:999px;
+
+  background:rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  border:1px solid rgba(255,255,255,0.1);
+
+  position:fixed;
+}
+
+.filter button{
+  position:relative;
+  padding:8px 18px;
+  border-radius:999px;
+  border:none;
+  background:transparent;
+  color:rgba(255,255,255,0.7);
+  font-size:13px;
+  letter-spacing:1px;
+  cursor:pointer;
+  z-index:2;
+}
+
+.filter button:hover{
+  color:#fff;
+}
+
+/* 滑动高亮块 */
+.filter .slider{
+  position:absolute;
+  height:32px;
+  border-radius:999px;
+  background:#fff;
+  transition: all 0.4s cubic-bezier(.77,0,.18,1);
+  z-index:1;
+}
+
+.overlay{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  background: linear-gradient(
+    rgba(0,0,0,0.4),
+    rgba(0,0,0,0.25),
+    rgba(0,0,0,0.4)
+  );
+
+  backdrop-filter: blur(8px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ===== 第一屏人物卡片 ===== */
+
+.profile-wrapper{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:100px;
+
+  width:100%;
+  max-width:2000px;
+
+  margin:0 auto;
+}
+
+/* 头像 */
+.avatar{
+  width:350px;
+  height:350px;
+  border-radius:50%;
+  background:url('头像.jpg') center/cover;
+
+  border:3px solid rgba(255,255,255,0.6);
+  box-shadow:0 0 40px rgba(255,255,255,0.3);
+
+  position:relative;
+  overflow:hidden;
+}
+
+/* 光影 */
+.avatar::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background: radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(255,255,255,0.5), transparent 60%);
+  opacity:0;
+  transition:0.2s;
+}
+
+.avatar:hover::after{
+  opacity:1;
+}
+
+/* 信息 */
+.info{
+  text-align:left;
+}
+
+.info h1{
+  font-size:40px;
+  margin-bottom:15px;
+}
+
+.info p{
+  font-size:40px;
+  color:rgba(255,255,255,0.85);
+  margin:6px 0;
+}
+
+/* ===== 第二屏 时间轴 ===== */
+
+.timeline{
+  width:100%;
+  max-width:1500px;
+  margin:0 auto;
+
+  display:flex;
+  flex-direction:column;
+  gap:25px;
+}
+
+/* 每一条 */
+.timeline-item{
+  padding:30px 60px;
+
+  background:rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+
+  border-left:2px solid rgba(255,255,255,0.4);
+
+  position:relative;
+
+  transform:translateX(-40px);
+  opacity:0;
+  transition:0.8s;
+}
+
+/* 出现动画 */
+.section.active .timeline-item{
+  transform:translateX(0);
+  opacity:1;
+}
+
+/* 发光点（高级感） */
+.timeline-item::before{
+  content:'';
+  position:absolute;
+  left:-6px;
+  top:20px;
+
+  width:10px;
+  height:10px;
+  border-radius:50%;
+
+  background:#fff;
+  box-shadow:0 0 10px #fff, 0 0 20px #fff;
+}
+
+/* 文字 */
+.timeline-item span{
+  font-size:12px;
+  color:rgba(255,255,255,0.6);
+}
+
+.timeline-item h3{
+  margin:5px 0;
+  font-size:30px;
+}
+
+.timeline-item p{
+  font-size:30px;
+  color:rgba(255,255,255,0.8);
+}
+/* ===== 第三屏 个人评价 ===== */
+.about{
+  width:65%;
+  margin:0 auto;
+  text-align:center;
+
+  padding:80px 40px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter: blur(15px);
+  border-radius:20px;
+
+  transform:translateY(60px) scale(0.97);
+  opacity:0;
+  transition:1s;
+}
+
+.section.active .about{
+  transform:translateY(0) scale(1);
+  opacity:1;
+}
+
+.about h2{
+  font-size:50px;
+  margin-bottom:20px;
+  font-weight:900;
+}
+
+.about p{
+  font-size:30px;
+  line-height:1.8;
+  color:rgba(255,255,255,0.85);
+  margin:12px 0;
+}
+
+</style>
+</head>
+<body>
+
+<!-- 🎥 视频背景 -->
+<video class="bg-video" autoplay muted loop>
+<source src="your-background.mp4" type="video/mp4">
+</video>
+
+<canvas id="bg"></canvas>
+<div class="bg-layer" id="bgLayer" style="opacity:1;"></div>
+<div class="overlay"></div>
+
+<div class="filter">
+<div class="slider"></div>
+
+<button class="active" onclick="switchPage('all', this)">个人简介</button>
+<button onclick="switchPage('ad', this)">摄影作品</button>
+<button onclick="switchPage('story', this)">摄像作品</button>
+<button onclick="switchPage('edit', this)">剪辑作品</button>
+</div>
+
+<!-- 页面容器 -->
+<div id="pages">
+
+  <!-- 个人简介 页面（保持原状） -->
+  <div class="page active" data-page="all">
+    <div class="section" data-bg="1.jpg">
+
+  <div class="profile-wrapper">
+
+    <div class="avatar" id="avatar"></div>
+
+    <div class="info">
+      <h1>罗译迪</h1>
+
+      <p class="typing" data-text="年龄：24"></p>
+      <p class="typing" data-text="性别：男"></p>
+      <p class="typing" data-text="微信：13032289442"></p>
+      <p class="typing" data-text="邮箱：mrlyd0128@gmail.com"></p>
+      <p class="typing" data-text="求职方向：摄像 / 摄影 / 剪辑"></p>
+
+    </div>
+
+  </div>
+
+</div>
+    <div class="section" data-bg="2.jpg">
+
+  <div class="timeline">
+
+    <div class="timeline-item">
+      <span>2022.9-2023.1</span>
+      <h3>天津众诚鼎盛传媒有限公司/摄影师</h3>
+      <p>负责服装的模特上身图拍摄及后期</p>
+    </div>
+
+    <div class="timeline-item">
+      <span>2024.3-2024.6</span>
+      <h3>壹弎壹玖文化传媒（天津）有限公司/摄像师</h3>
+      <p>参与服装类短视频的拍摄</p>
+    </div>
+
+    <div class="timeline-item">
+      <span>2024.6-2024.10</span>
+      <h3>天津聚峰文化科技有限公司/视频剪辑师及摄像师</h3>
+      <p>参与作业帮，猿辅导，阳澄湖大闸蟹蟹卡等信息流视频的拍摄及剪辑</p>
+    </div>
+
+  </div>
+
+</div>
+    <div class="section" data-bg="3.jpg">
+
+  <div class="about">
+
+    <h2>关于我</h2>
+
+    <p>
+      我相信画面不仅仅是记录，而是情绪的表达。  
+      在每一次快门与剪辑中，我追求节奏、光影与故事之间的平衡。
+    </p>
+
+    <p>
+      擅长用视觉语言打动观众，  
+      用影像传递品牌与情绪价值。
+    </p>
+
+  </div>
+
+</div>
+  </div>
+
+  <!-- 摄影作品 -->
+  <div class="page" data-page="ad">
+    <div class="section" data-bg="4.jpg">摄影作品 - 第一部分</div>
+    <div class="section" data-bg="5.jpg">摄影作品 - 第二部分</div>
+    <div class="section" data-bg="6.jpg">摄影作品 - 第三部分</div>
+
+  </div>
+
+  <!-- 摄像作品 -->
+  <div class="page" data-page="story">
+    <div class="section" data-bg="7.jpg">摄像作品 - 第一部分</div>
+    <div class="section" data-bg="8.jpg">摄像作品 - 第二部分</div>
+    <div class="section" data-bg="9.jpg">摄像作品 - 第三部分</div>
+
+    <div class="grid">
+      <div class="item story" onclick="openVideo('v1.mp4')"><img src="f1.jpg"></div>
+      <div class="item story" onclick="openVideo('v2.mp4')"><img src="f2.jpg"></div>
+      <div class="item story" onclick="openVideo('v3.mp4')"><img src="f3.jpg"></div>
+    </div>
+  </div>
+
+  <!-- 剪辑作品 -->
+  <div class="page" data-page="edit">
+    <div class="section" data-bg="10.jpg">剪辑作品 - 第一部分</div>
+    <div class="section" data-bg="11.jpg">剪辑作品 - 第二部分</div>
+    <div class="section" data-bg="12.jpg">剪辑作品 - 第三部分</div>
+
+    <div class="grid">
+      <div class="item story" onclick="openVideo('v1.mp4')"><img src="f1.jpg"></div>
+      <div class="item story" onclick="openVideo('v2.mp4')"><img src="f2.jpg"></div>
+      <div class="item story" onclick="openVideo('v3.mp4')"><img src="f3.jpg"></div>
+    </div>
+  </div>
+
+  
+
+</div>
+
+
+
+<div id="videoModal"><video class="player" id="player" controls autoplay></video></div>
+<audio id="bgm" src="bgm.mp3" loop></audio>
+
+<script>
+
+/* 背景切换（最终版） */
+const sections=document.querySelectorAll('.section');
+const bgLayer=document.getElementById('bgLayer');
+let currentBg="";
+let isTransitioning=false;
+
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    const newBg=entry.target.dataset.bg;
+    if(entry.isIntersecting && !isTransitioning && newBg!==currentBg){
+      isTransitioning=true;
+      const newLayer=document.createElement('div');
+      newLayer.className='bg-layer';
+      newLayer.style.backgroundImage=`url(${newBg})`;
+      document.body.appendChild(newLayer);
+
+      setTimeout(()=>{newLayer.style.opacity='1';},50);
+
+      setTimeout(()=>{
+        bgLayer.style.backgroundImage=`url(${newBg})`;
+        currentBg=newBg;
+        newLayer.remove();
+        isTransitioning=false;
+      },1000);
+    }
+    // 保证激活状态
+    if(entry.isIntersecting) entry.target.classList.add('active');
+    else entry.target.classList.remove('active');  // ✅ 修复滚回顶部消失问题
+  });
+},{threshold:0.6});
+
+sections.forEach(sec=>observer.observe(sec));
+
+/* 筛选 */
+function filterWorks(type){
+
+// 控制按钮选中状态
+document.querySelectorAll('.filter button').forEach(btn=>{
+btn.classList.remove('active');
+});
+event.target.classList.add('active');
+
+// 控制内容筛选
+document.querySelectorAll('.item').forEach(el=>{
+el.classList.remove('hidden');
+if(type!=='all'&&!el.classList.contains(type)) el.classList.add('hidden');
+});
+}
+
+/* 视频 */
+function openVideo(src){
+const modal=document.getElementById('videoModal');
+const player=document.getElementById('player');
+player.src=src;
+modal.classList.add('active');
+}
+
+document.getElementById('videoModal').onclick=function(){
+this.classList.remove('active');
+document.getElementById('player').pause();
+}
+
+/* 粒子（电影光斑） */
+const canvas=document.getElementById('bg');
+const ctx=canvas.getContext('2d');
+
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+resize();
+window.addEventListener('resize',resize);
+
+let particles=[];
+for(let i=0;i<50;i++){
+particles.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,size:Math.random()*30+10,alpha:Math.random()*0.5+0.2,vx:(Math.random()-0.5)*0.2,vy:(Math.random()-0.5)*0.2});
+}
+
+function drawGlow(x,y,size,alpha){
+let g=ctx.createRadialGradient(x,y,0,x,y,size);
+g.addColorStop(0,`rgba(255,255,255,${alpha})`);
+g.addColorStop(1,'rgba(255,255,255,0)');
+ctx.fillStyle=g;
+ctx.beginPath();
+ctx.arc(x,y,size,0,Math.PI*2);
+ctx.fill();
+}
+
+function animate(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+particles.forEach(p=>{
+p.x+=p.vx;p.y+=p.vy;
+if(p.x<0||p.x>canvas.width) p.vx*=-1;
+if(p.y<0||p.y>canvas.height) p.vy*=-1;
+p.alpha+=(Math.random()-0.5)*0.02;
+p.alpha=Math.max(0.2,Math.min(0.7,p.alpha));
+drawGlow(p.x,p.y,p.size,p.alpha);
+});
+requestAnimationFrame(animate);
+}
+animate();
+
+function switchPage(page, btn){
+  // 页面切换
+  document.querySelectorAll('.page').forEach(p=>{
+    p.classList.remove('active');
+  });
+  const newPage = document.querySelector(`[data-page="${page}"]`);
+  newPage.classList.add('active');
+
+  // 滚动到顶部
+  window.scrollTo({ top: 0, behavior: 'instant' });
+
+  // **更新背景为新页面第一个 section**
+  const firstSection = newPage.querySelector('.section');
+  if(firstSection){
+    const newBg = firstSection.dataset.bg;
+    bgLayer.style.backgroundImage = `url(${newBg})`;
+    currentBg = newBg;
+
+    // 激活第一个 section
+    sections.forEach(sec => sec.classList.remove('active'));
+    firstSection.classList.add('active');
+  }
+
+  // **重新绑定 Observer，只监听当前页面的 section**
+  sections.forEach(sec => observer.unobserve(sec));        // 先解除所有监听
+  const newSections = newPage.querySelectorAll('.section');
+  newSections.forEach(sec => observer.observe(sec));      // 只观察新页面的 section
+
+  // 按钮状态
+  document.querySelectorAll('.filter button').forEach(b=>{
+    b.classList.remove('active');
+  });
+  btn.classList.add('active');
+
+  // 滑块动画
+  const slider=document.querySelector('.slider');
+  slider.style.width=btn.offsetWidth+'px';
+  slider.style.left=btn.offsetLeft+'px';
+}
+
+window.onload=function(){
+const activeBtn=document.querySelector('.filter button.active');
+const slider=document.querySelector('.slider');
+slider.style.width=activeBtn.offsetWidth+'px';
+slider.style.left=activeBtn.offsetLeft+'px';
+}
+
+function startTyping(){
+  const items = document.querySelectorAll('.typing');
+
+  items.forEach((el,index)=>{
+    const text = el.dataset.text;
+    el.innerHTML = '';
+
+    let i=0;
+
+    setTimeout(()=>{
+      const timer=setInterval(()=>{
+        el.innerHTML += text[i];
+        i++;
+        if(i>=text.length) clearInterval(timer);
+      },40);
+    }, index*300);
+  });
+}
+
+const first = document.querySelector('[data-page="all"] .section');
+
+const ob = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      startTyping();
+    }
+  });
+},{threshold:0.6});
+
+ob.observe(first);
+
+const avatar = document.getElementById('avatar');
+
+avatar.addEventListener('mousemove',(e)=>{
+  const rect = avatar.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  avatar.style.setProperty('--x', x+'px');
+  avatar.style.setProperty('--y', y+'px');
+});
+
+window.addEventListener('load', () => {
+  // 找到第一页 section
+  const firstPage = document.querySelector('[data-page="all"]');
+  const firstSection = firstPage.querySelector('.section');
+
+  if(firstSection){
+    const newBg = firstSection.dataset.bg;
+    bgLayer.style.backgroundImage = `url(${newBg})`;
+    currentBg = newBg;
+
+    // 激活第一个 section
+    sections.forEach(sec => sec.classList.remove('active'));
+    firstSection.classList.add('active');
+
+    // 只绑定第一页的 section
+    sections.forEach(sec => observer.unobserve(sec));
+    firstPage.querySelectorAll('.section').forEach(sec => observer.observe(sec));
+  }
+});
+
+</script>
+
+</body>
+</html>
